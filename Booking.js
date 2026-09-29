@@ -27,11 +27,6 @@ const bookingSchema = new mongoose.Schema(
             required: true
         },
 
-        time: {
-            type: String,
-            default: ""
-        },
-
         message: {
             type: String,
             default: ""
@@ -39,7 +34,7 @@ const bookingSchema = new mongoose.Schema(
 
         status: {
             type: String,
-            default: "pending"
+            default: "Pending"
         }
     },
 
@@ -48,4 +43,5 @@ const bookingSchema = new mongoose.Schema(
     }
 );
 
-module.exports = mongoose.model("Booking", bookingSchema);
+module.exports =
+    mongoose.model("Booking", bookingSchema);
