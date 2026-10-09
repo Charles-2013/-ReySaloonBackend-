@@ -1,47 +1,53 @@
+
 const mongoose = require("mongoose");
 
 const bookingSchema = new mongoose.Schema(
     {
         name: {
             type: String,
-            required: true
+            required: [true, "Jina la mteja linahitajika"],
+            trim: true
         },
 
         phone: {
             type: String,
-            required: true
+            required: [true, "Namba ya simu inahitajika"],
+            trim: true
         },
 
         service: {
             type: String,
-            required: true
+            required: [true, "Huduma inayochaguliwa inahitajika"],
+            trim: true
         },
 
         price: {
             type: Number,
-            default: 0
+            default: 0,
+            min: 0
         },
 
         date: {
             type: String,
-            required: true
+            required: [true, "Tarehe ya booking inahitajika"]
         },
 
-        message: {
+        time: {
             type: String,
             default: ""
         },
 
-        status: {
+        message: {
             type: String,
-            default: "Pending"
+            default: "",
+            trim: true
         }
     },
-
     {
         timestamps: true
     }
 );
 
-module.exports =
-    mongoose.model("Booking", bookingSchema);
+const Booking = mongoose.model("Booking", bookingSchema);
+
+module.exports = Booking;
