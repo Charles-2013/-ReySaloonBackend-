@@ -1,3 +1,4 @@
+
 const express = require("express");
 const mongoose = require("mongoose");
 const cors = require("cors");
@@ -7,16 +8,16 @@ const Booking = require("./Booking");
 
 const app = express();
 
-// ===============================
+// =====================================
 // MIDDLEWARE
-// ===============================
+// =====================================
 
 app.use(cors());
 app.use(express.json());
 
-// ===============================
-// TEST ROUTE
-// ===============================
+// =====================================
+// HOME ROUTE
+// =====================================
 
 app.get("/", (req, res) => {
     res.json({
@@ -25,9 +26,9 @@ app.get("/", (req, res) => {
     });
 });
 
-// ===============================
+// =====================================
 // HEALTH CHECK
-// ===============================
+// =====================================
 
 app.get("/api/health", (req, res) => {
     res.json({
@@ -39,235 +40,182 @@ app.get("/api/health", (req, res) => {
     });
 });
 
-// ===============================
+// =====================================
 // GET ALL BOOKINGS
-// ===============================
+// =====================================
 
 app.get("/api/bookings", async (req, res) => {
-
     try {
-
         const bookings = await Booking
             .find()
             .sort({ createdAt: -1 });
 
-        res.json({
+        res.status(200).json({
             success: true,
             count: bookings.length,
-            bookings: bookings
+            bookings
         });
 
     } catch (error) {
-
-        console.error(error);
+        console.error("Get bookings error:", error);
 
         res.status(500).json({
             success: false,
-            message: "Imeshindikana kupata bookings"
+            message: "Imeshindikana kupata booking"
         });
-
     }
-
 });
 
-// ===============================
+// =====================================
 // CREATE BOOKING
-// ===============================
+// =====================================
 
 app.post("/api/bookings", async (req, res) => {
-
     try {
-
         const {
             name,
             phone,
             service,
             price,
             date,
+            time,
             message
         } = req.body;
 
-        // Check required information
-
-        if (!name || !phone || !service || !date) {
-
+        // Hakikisha taarifa muhimu zimejazwa
+        if (
+            !name?.trim() ||
+            !phone?.trim() ||
+            !service?.trim() ||
+            !date
+        ) {
             return res.status(400).json({
-
                 success: false,
-
                 message:
                     "Jina, simu, huduma na tarehe vinahitajika"
-
             });
-
         }
 
-        // Create booking
+        // Zuia kuhifadhi booking kama database haijaunganishwa
+        if (mongoose.connection.readyState !== 1) {
+            return res.status(503).json({
+                success: false,
+                message:
+                    "Database haijaunganishwa. Jaribu tena baadaye."
+            });
+        }
 
+        // Tengeneza booking mpya
         const booking = new Booking({
-
-            name: name,
-
-            phone: phone,
-
-            service: service,
-
-            price: price || 0,
-
-            date: date,
-
-            message: message || ""
-
+            name: name.trim(),
+            phone: phone.trim(),
+            service: service.trim(),
+            price: Number(price) || 0,
+            date,
+            time: time || "",
+            message: message?.trim() || ""
         });
 
-        // Save to MongoDB
+        // Hifadhi kwenye MongoDB
+        const savedBooking = await booking.save();
 
-        const savedBooking =
-            await booking.save();
-
-        res.status(201).json({
-
+        return res.status(201).json({
             success: true,
-
-            message:
-                "Booking imehifadhiwa vizuri",
-
+            message: "Booking imehifadhiwa vizuri",
             booking: savedBooking
-
         });
 
     } catch (error) {
+        console.error("Create booking error:", error);
 
-        console.error(error);
-
-        res.status(500).json({
-
+        return res.status(500).json({
             success: false,
-
-            message:
-                "Imeshindikana kuhifadhi booking"
-
+            message: "Imeshindikana kuhifadhi booking"
         });
-
     }
-
 });
 
-// ===============================
+// =====================================
 // DELETE BOOKING
-// ===============================
+// =====================================
 
 app.delete("/api/bookings/:id", async (req, res) => {
-
     try {
+        const { id } = req.params;
 
-        const deletedBooking =
-            await Booking.findByIdAndDelete(
-                req.params.id
-            );
-
-        if (!deletedBooking) {
-
-            return res.status(404).json({
-
+        // Hakikisha ID ni sahihi
+        if (!mongoose.isValidObjectId(id)) {
+            return res.status(400).json({
                 success: false,
-
-                message:
-                    "Booking haijapatikana"
-
+                message: "Kitambulisho cha booking si sahihi"
             });
-
         }
 
-        res.json({
+        const deletedBooking =
+            await Booking.findByIdAndDelete(id);
 
+        if (!deletedBooking) {
+            return res.status(404).json({
+                success: false,
+                message: "Booking haijapatikana"
+            });
+        }
+
+        return res.status(200).json({
             success: true,
-
-            message:
-                "Booking imefutwa vizuri"
-
+            message: "Booking imefutwa vizuri"
         });
 
     } catch (error) {
+        console.error("Delete booking error:", error);
 
-        console.error(error);
-
-        res.status(500).json({
-
+        return res.status(500).json({
             success: false,
-
-            message:
-                "Imeshindikana kufuta booking"
-
+            message: "Imeshindikana kufuta booking"
         });
-
     }
-
 });
 
-// ===============================
+// =====================================
 // MONGODB CONNECTION
-// ===============================
+// =====================================
 
-const MONGODB_URI =
-    process.env.MONGODB_URI;
+const MONGODB_URI = process.env.MONGODB_URI;
 
 if (!MONGODB_URI) {
-
     console.error(
-        "MONGODB_URI haipo kwenye .env"
+        "Kosa: MONGODB_URI haijawekwa kwenye Environment Variables."
     );
-
     process.exit(1);
-
 }
 
-mongoose
-    .connect(MONGODB_URI)
-    .then(() => {
+// =====================================
+// START SERVER AFTER DATABASE CONNECTS
+// =====================================
 
-        console.log(
-            "MongoDB imeunganishwa vizuri!"
-        );
+const PORT = process.env.PORT || 5000;
 
-    })
-    .catch((error) => {
+async function startServer() {
+    try {
+        await mongoose.connect(MONGODB_URI);
 
+        console.log("MongoDB imeunganishwa vizuri!");
+
+        app.listen(PORT, "0.0.0.0", () => {
+            console.log("================================");
+            console.log("REY SOON SALUNI BACKEND");
+            console.log(`Server imeanza kwenye port ${PORT}`);
+            console.log("================================");
+        });
+
+    } catch (error) {
         console.error(
-            "MongoDB connection error:"
+            "MongoDB connection error:",
+            error.message
         );
 
-        console.error(error.message);
+        process.exit(1);
+    }
+}
 
-    });
-
-// ===============================
-// START SERVER
-// ===============================
-
-const PORT =
-    process.env.PORT || 5000;
-
-app.listen(PORT, () => {
-
-    console.log(
-        "--------------------------------"
-    );
-
-    console.log(
-        "REY SOON SALUNI BACKEND"
-    );
-
-    console.log(
-        "--------------------------------"
-    );
-
-    console.log(
-        `Server: http://localhost:${PORT}`
-    );
-
-    console.log(
-        "Server imeanza kufanya kazi!"
-    );
-
-});
+startServer();
